@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot Query Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a237e;
+            margin-bottom: 8px;
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #546e7a;
+            margin-bottom: 30px;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(30, 60, 114, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .speed-control label {
+            font-size: 14px;
+            color: #37474f;
+            font-weight: 500;
+        }
+
+        .speed-control select {
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: 2px solid #cfd8dc;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            background: white;
+            color: #37474f;
+            transition: border-color 0.2s;
+        }
+
+        .speed-control select:hover {
+            border-color: #2a5298;
+        }
+
+        .diagram-wrapper {
+            position: relative;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+        }
+
+        .diagram-container {
+            position: relative;
+            padding: 40px 20px;
+            overflow-y: auto;
+            overflow-x: auto;
+            max-height: 700px;
+            scroll-behavior: smooth;
+        }
+
+        .participants {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 40px;
+            position: relative;
+            min-width: 1200px;
+        }
+
+        .participant {
+            text-align: center;
+            position: relative;
+            flex: 1;
+            max-width: 130px;
+        }
+
+        .participant-box {
+            background: white;
+            border: 2px solid #546e7a;
+            border-radius: 6px;
+            padding: 14px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #263238;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            min-height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .participant-box.user {
+            border-color: #c62828;
+            background: #ffebee;
+            color: #b71c1c;
+        }
+
+        .participant-box.guardrails {
+            border-color: #f57c00;
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .participant-box.retrieval {
+            border-color: #6a1b9a;
+            background: #f3e5f5;
+            color: #4a148c;
+        }
+
+        .participant-box.database {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .participant-box.llm {
+            border-color: #512da8;
+            background: #ede7f6;
+            color: #311b92;
+        }
+
+        .lifeline {
+            width: 2px;
+            background: #cfd8dc;
+            margin: 10px auto 0;
+            height: 2000px;
+            position: relative;
+        }
+
+        .messages-container {
+            position: absolute;
+            top: 180px;
+            left: 0;
+            right: 0;
+            min-height: 2000px;
+        }
+
+        .message {
+            position: absolute;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .message.active {
+            opacity: 1;
+        }
+
+        .arrow {
+            position: absolute;
+            height: 2px;
+            background: #1976d2;
+            box-shadow: 0 1px 3px rgba(25, 118, 210, 0.3);
+        }
+
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid #1976d2;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        /* Left-pointing arrow */
+        .arrow.left::after {
+            right: auto;
+            left: 0;
+            border-left: none;
+            border-right: 10px solid #1976d2;
+        }
+
+        /* Return arrow (Dashed Grey) */
+        .arrow.return {
+            background: none;
+            border-top: 2px dashed #78909c;
+            box-shadow: none;
+        }
+
+        /* Return arrowhead colors */
+        .arrow.return::after {
+            border-left-color: #78909c;
+        }
+
+        .arrow.return.left::after {
+            border-right-color: #78909c;
+        }
+
+        .message-label {
+            position: absolute;
+            background: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            color: #263238;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+
+        .note {
+            position: absolute;
+            background: #fff8e1;
+            border: 2px solid #ffa000;
+            border-left-width: 4px;
+            border-radius: 4px;
+            padding: 10px 14px;
+            font-size: 11px;
+            max-width: 220px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            font-weight: 500;
+            color: #e65100;
+        }
+
+        .note.active {
+            opacity: 1;
+        }
+
+        .step-info {
+            text-align: center;
+            margin-top: 25px;
+            padding: 18px 24px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #e8eaf6 100%);
+            border-radius: 8px;
+            border-left: 4px solid #1976d2;
+            font-size: 14px;
+            color: #1a237e;
+            min-height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .step-number {
+            background: #1976d2;
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-weight: 700;
+            font-size: 13px;
+            box-shadow: 0 2px 4px rgba(25, 118, 210, 0.3);
+        }
+
+        .highlight {
+            background: #ffecb3;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            color: #e65100;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+            }
+        }
+
+        .participant-box.active {
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        .current-step-marker {
+            position: absolute;
+            left: -10px;
+            width: 6px;
+            height: 40px;
+            background: #1976d2;
+            border-radius: 3px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .current-step-marker.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>AI Chatbot Query Flow</h1>
+        <p class="subtitle">Step-by-step visualization of the query processing pipeline</p>
+
+        <div class="controls">
+            <button id="startBtn" onclick="startAnimation()">Start Animation</button>
+            <button id="pauseBtn" onclick="pauseAnimation()" disabled>Pause</button>
+            <button id="resetBtn" onclick="resetAnimation()">Reset</button>
+            <div class="speed-control">
+                <label for="speed">Speed:</label>
+                <select id="speed" onchange="changeSpeed()">
+                    <option value="2000">Slow</option>
+                    <option value="1200" selected>Normal</option>
+                    <option value="600">Fast</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="diagram-wrapper">
+            <div class="diagram-container" id="diagramContainer">
+                <div class="participants">
+                    <div class="participant">
+                        <div class="participant-box user" id="p-user">User</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box" id="p-frontend">Frontend</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box guardrails" id="p-guardrails">GuardRails</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box retrieval" id="p-retrieval">Retrieval</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box database" id="p-qdrant">Qdrant</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box database" id="p-neo4j">Neo4j</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box database" id="p-opensearch">OpenSearch</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box database" id="p-memory">Redis Memory</div>
+                        <div class="lifeline"></div>
+                    </div>
+                    <div class="participant">
+                        <div class="participant-box llm" id="p-llm">Azure OpenAI</div>
+                        <div class="lifeline"></div>
+                    </div>
+                </div>
+
+                <div class="messages-container" id="messagesContainer"></div>
+            </div>
+        </div>
+
+        <div class="step-info" id="stepInfo">
+            Click <strong>Start Animation</strong> to visualize the query flow
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        let animationSpeed = 1200;
+        let animationInterval = null;
+        let isPaused = false;
+
+        const steps = [
+            { from: 'user', to: 'frontend', label: '1. Enter Query', description: 'User submits a query through the frontend interface' },
+            { from: 'frontend', to: 'retrieval', label: '2. POST /message', description: 'Frontend sends query to <span class="highlight">ai-retrieval</span> service' },
+            { note: 'retrieval', text: 'Initialize Stream', description: 'Retrieval service initializes a streaming session' },
+            { from: 'retrieval', to: 'frontend', label: '3. {stream_id}', description: 'Returns stream ID to frontend for SSE connection' },
+            { from: 'frontend', to: 'retrieval', label: '4. GET /chat-stream', description: 'Frontend connects to streaming endpoint' },
+            { from: 'retrieval', to: 'guardrails', label: '5. check_input(query)', description: '<span class="highlight">GuardRails</span> validates input for security threats' },
+            { from: 'guardrails', to: 'retrieval', label: '6. ALLOW/REPAIR', description: 'Input validation passed, query is safe to process' },
+            { from: 'retrieval', to: 'memory', label: '7. get_history()', description: 'Load conversation history from <span class="highlight">Redis Memory</span>' },
+            { from: 'memory', to: 'retrieval', label: '8. Previous Messages', description: 'Returns conversation context for maintaining continuity' },
+            { note: 'retrieval', text: 'Multi-Source Retrieval', description: 'Parallel search across <span class="highlight">3 databases</span>' },
+            { from: 'retrieval', to: 'qdrant', label: '9a. Vector Search', description: 'Semantic similarity search using embeddings' },
+            { from: 'qdrant', to: 'retrieval', label: 'Top K Chunks', description: 'Returns most similar document chunks' },
+            { from: 'retrieval', to: 'neo4j', label: '9b. Graph Query', description: 'Query knowledge graph for entity relationships' },
+            { from: 'neo4j', to: 'retrieval', label: 'Connected Entities', description: 'Returns related entities and relationships' },
+            { from: 'retrieval', to: 'opensearch', label: '9c. Full-Text Search', description: 'Traditional keyword-based search' },
+            { from: 'opensearch', to: 'retrieval', label: 'Matching Documents', description: 'Returns matching documents' },
+            { note: 'retrieval', text: 'Build Context', description: 'Aggregates all retrieved data into unified context' },
+            { from: 'retrieval', to: 'llm', label: '10. Generate(context)', description: 'Send context to <span class="highlight">Azure OpenAI</span> for generation' },
+            { from: 'llm', to: 'retrieval', label: '11. Token Stream', description: 'LLM streams response tokens in real-time' },
+            { from: 'retrieval', to: 'guardrails', label: '12. supervise_stream()', description: 'Validate each token for safety compliance' },
+            { from: 'guardrails', to: 'retrieval', label: '13. Token Allowed', description: 'Output validation passed' },
+            { from: 'retrieval', to: 'frontend', label: '14. SSE Event (token)', description: 'Stream token to frontend via Server-Sent Events' },
+            { from: 'frontend', to: 'user', label: '15. Display Token', description: 'User sees response appearing in real-time' },
+            { note: 'retrieval', text: 'Save Conversation', description: 'Store interaction for future context' },
+            { from: 'retrieval', to: 'memory', label: '16. save_message()', description: 'Persist complete conversation to Redis' },
+        ];
+
+        function startAnimation() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            isPaused = false;
+
+            if (currentStep === 0) {
+                resetAnimation();
+            }
+
+            animationInterval = setInterval(nextStep, animationSpeed);
+        }
+
+        function pauseAnimation() {
+            isPaused = true;
+            clearInterval(animationInterval);
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+        }
+
+        function resetAnimation() {
+            clearInterval(animationInterval);
+            currentStep = 0;
+            document.getElementById('messagesContainer').innerHTML = '';
+            document.getElementById('stepInfo').innerHTML = 'Click <strong>Start Animation</strong> to visualize the query flow';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('diagramContainer').scrollTop = 0;
+
+            document.querySelectorAll('.participant-box').forEach(box => {
+                box.classList.remove('active');
+            });
+        }
+
+        function changeSpeed() {
+            animationSpeed = parseInt(document.getElementById('speed').value);
+            if (!isPaused && currentStep > 0) {
+                clearInterval(animationInterval);
+                animationInterval = setInterval(nextStep, animationSpeed);
+            }
+        }
+
+        function nextStep() {
+            if (currentStep >= steps.length) {
+                pauseAnimation();
+                document.getElementById('stepInfo').innerHTML = '<span class="step-number">✓</span> <strong>Animation Complete</strong> - Click Reset to watch again';
+                return;
+            }
+
+            const step = steps[currentStep];
+            const stepNum = currentStep + 1;
+
+            // Update step info
+            document.getElementById('stepInfo').innerHTML =
+                `<span class="step-number">${stepNum}</span> ${step.description}`;
+
+            // Clear previous active states
+            document.querySelectorAll('.participant-box').forEach(box => {
+                box.classList.remove('active');
+            });
+
+            const y = currentStep * 80;
+
+            if (step.note) {
+                // Show note
+                const noteEl = document.createElement('div');
+                noteEl.className = 'note active';
+                noteEl.textContent = step.text;
+                noteEl.style.left = getParticipantX(step.note) + 'px';
+                noteEl.style.top = y + 'px';
+                document.getElementById('messagesContainer').appendChild(noteEl);
+
+                if (document.getElementById('p-' + step.note)) {
+                    document.getElementById('p-' + step.note).classList.add('active');
+                }
+            } else {
+                // Show message arrow
+                const fromX = getParticipantX(step.from);
+                const toX = getParticipantX(step.to);
+
+                const messageEl = document.createElement('div');
+                messageEl.className = 'message active';
+
+                const arrowEl = document.createElement('div');
+                arrowEl.className = 'arrow' + (step.return ? ' return' : '');
+                const width = Math.abs(toX - fromX);
+                arrowEl.style.width = width + 'px';
+                arrowEl.style.left = Math.min(fromX, toX) + 'px';
+                arrowEl.style.top = y + 'px';
+                if (toX < fromX) {
+                    arrowEl.classList.add('left');
+                }
+
+                const labelEl = document.createElement('div');
+                labelEl.className = 'message-label';
+                labelEl.textContent = step.label;
+                labelEl.style.left = (Math.min(fromX, toX) + width / 2 - 50) + 'px';
+                labelEl.style.top = (y - 22) + 'px';
+
+                messageEl.appendChild(arrowEl);
+                messageEl.appendChild(labelEl);
+                document.getElementById('messagesContainer').appendChild(messageEl);
+
+                // Highlight participants
+                if (document.getElementById('p-' + step.from)) {
+                    document.getElementById('p-' + step.from).classList.add('active');
+                }
+                if (document.getElementById('p-' + step.to)) {
+                    document.getElementById('p-' + step.to).classList.add('active');
+                }
+            }
+
+            // Auto-scroll to keep current step visible
+            const container = document.getElementById('diagramContainer');
+            const scrollTarget = Math.max(0, y - 200);
+            container.scrollTo({
+                top: scrollTarget,
+                behavior: 'smooth'
+            });
+
+            currentStep++;
+        }
+
+        function getParticipantX(name) {
+            const participants = ['user', 'frontend', 'guardrails', 'retrieval', 'qdrant', 'neo4j', 'opensearch', 'memory', 'llm'];
+            const index = participants.indexOf(name);
+            const containerWidth = document.querySelector('.participants').offsetWidth;
+            const spacing = containerWidth / participants.length;
+            return index * spacing + spacing / 2;
+        }
+    </script>
+</body>
+
+</html>
